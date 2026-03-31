@@ -2,8 +2,10 @@ mod input;
 mod render;
 
 use std::env;
+use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use api::{
     AnthropicClient, ContentBlockDelta, InputContentBlock, InputMessage, MessageRequest,
@@ -24,6 +26,7 @@ use tools::{execute_tool, mvp_tool_specs};
 const DEFAULT_MODEL: &str = "claude-sonnet-4-20250514";
 const DEFAULT_MAX_TOKENS: u32 = 32;
 const DEFAULT_DATE: &str = "2026-03-31";
+const DEFAULT_SESSION_LIMIT: usize = 20;
 
 fn main() {
     if let Err(error) = run() {
@@ -42,6 +45,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             session_path,
             command,
         } => resume_session(&session_path, command),
+        CliAction::ResumeNamed { target, command } => resume_named_session(&target, command),
+        CliAction::ListSessions { query, limit } => list_sessions(query.as_deref(), limit),
         CliAction::Prompt { prompt, model } => LiveCli::new(model, false)?.run_turn(&prompt)?,
         CliAction::Repl { model } => run_repl(model)?,
         CliAction::Help => print_help(),
@@ -60,6 +65,14 @@ enum CliAction {
     ResumeSession {
         session_path: PathBuf,
         command: Option<String>,
+    },
+    ResumeNamed {
+        target: String,
+        command: Option<String>,
+    },
+    ListSessions {
+        query: Option<String>,
+        limit: usize,
     },
     Prompt {
         prompt: String,
@@ -109,6 +122,8 @@ fn parse_args(args: &[String]) -> Result<CliAction, String> {
     match rest[0].as_str() {
         "dump-manifests" => Ok(CliAction::DumpManifests),
         "bootstrap-plan" => Ok(CliAction::BootstrapPlan),
+        "resume" => parse_named_resume_args(&rest[1..]),
+        "sessions" => parse_sessions_args(&rest[1..]),
         "system-prompt" => parse_system_prompt_args(&rest[1..]),
         "prompt" => {
             let prompt = rest[1..].join(" ");
@@ -147,6 +162,48 @@ fn parse_system_prompt_args(args: &[String]) -> Result<CliAction, String> {
     }
 
     Ok(CliAction::PrintSystemPrompt { cwd, date })
+}
+
+fn parse_named_resume_args(args: &[String]) -> Result<CliAction, String> {
+    let target = args
+        .first()
+        .ok_or_else(|| "missing session id, path, or 'latest' for resume".to_string())?
+        .clone();
+    let command = args.get(1).cloned();
+    if args.len() > 2 {
+        return Err("resume accepts at most one trailing slash command".to_string());
+    }
+    Ok(CliAction::ResumeNamed { target, command })
+}
+
+fn parse_sessions_args(args: &[String]) -> Result<CliAction, String> {
+    let mut query = None;
+    let mut limit = DEFAULT_SESSION_LIMIT;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--query" => {
+                let value = args
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value for --query".to_string())?;
+                query = Some(value.clone());
+                index += 2;
+            }
+            "--limit" => {
+                let value = args
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value for --limit".to_string())?;
+                limit = value
+                    .parse::<usize>()
+                    .map_err(|error| format!("invalid --limit value: {error}"))?;
+                index += 2;
+            }
+            other => return Err(format!("unknown sessions option: {other}")),
+        }
+    }
+
+    Ok(CliAction::ListSessions { query, limit })
 }
 
 fn parse_resume_args(args: &[String]) -> Result<CliAction, String> {
@@ -238,6 +295,43 @@ fn resume_session(session_path: &Path, command: Option<String>) {
     }
 }
 
+fn resume_named_session(target: &str, command: Option<String>) {
+    let session_path = match resolve_session_target(target) {
+        Ok(path) => path,
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+    };
+    resume_session(&session_path, command);
+}
+
+fn list_sessions(query: Option<&str>, limit: usize) {
+    match load_session_entries(query, limit) {
+        Ok(entries) => {
+            if entries.is_empty() {
+                println!("No saved sessions found.");
+                return;
+            }
+            println!("Saved sessions:");
+            for entry in entries {
+                println!(
+                    "- {} | updated={} | messages={} | tokens={} | {}",
+                    entry.id,
+                    entry.updated_unix,
+                    entry.message_count,
+                    entry.total_tokens,
+                    entry.preview
+                );
+            }
+        }
+        Err(error) => {
+            eprintln!("failed to list sessions: {error}");
+            std::process::exit(1);
+        }
+    }
+}
+
 fn run_repl(model: String) -> Result<(), Box<dyn std::error::Error>> {
     let mut cli = LiveCli::new(model, true)?;
     let editor = input::LineEditor::new("› ");
@@ -271,11 +365,13 @@ struct LiveCli {
     model: String,
     system_prompt: Vec<String>,
     runtime: ConversationRuntime<AnthropicRuntimeClient, CliToolExecutor>,
+    session_path: PathBuf,
 }
 
 impl LiveCli {
     fn new(model: String, enable_tools: bool) -> Result<Self, Box<dyn std::error::Error>> {
         let system_prompt = build_system_prompt()?;
+        let session_path = new_session_path()?;
         let runtime = build_runtime(
             Session::new(),
             model.clone(),
@@ -286,6 +382,7 @@ impl LiveCli {
             model,
             system_prompt,
             runtime,
+            session_path,
         })
     }
 
@@ -306,6 +403,7 @@ impl LiveCli {
                     &mut stdout,
                 )?;
                 println!();
+                self.persist_session()?;
                 self.print_turn_usage(turn.usage);
                 Ok(())
             }
@@ -370,8 +468,150 @@ impl LiveCli {
             let estimated_saved = estimated_before.saturating_sub(estimated_after);
             println!("Estimated tokens saved: {estimated_saved}");
         }
+        self.persist_session()?;
         Ok(())
     }
+
+    fn persist_session(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.runtime.session().save_to_path(&self.session_path)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SessionListEntry {
+    id: String,
+    path: PathBuf,
+    updated_unix: u64,
+    message_count: usize,
+    total_tokens: u32,
+    preview: String,
+}
+
+fn new_session_path() -> io::Result<PathBuf> {
+    let session_dir = default_session_dir()?;
+    fs::create_dir_all(&session_dir)?;
+    let timestamp = current_unix_timestamp();
+    let process_id = std::process::id();
+    Ok(session_dir.join(format!("session-{timestamp}-{process_id}.json")))
+}
+
+fn default_session_dir() -> io::Result<PathBuf> {
+    Ok(env::current_dir()?.join(".rusty-claude").join("sessions"))
+}
+
+fn current_unix_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_secs())
+}
+
+fn resolve_session_target(target: &str) -> io::Result<PathBuf> {
+    let direct_path = PathBuf::from(target);
+    if direct_path.is_file() {
+        return Ok(direct_path);
+    }
+
+    let entries = load_session_entries(None, usize::MAX)?;
+    if target == "latest" {
+        return entries
+            .into_iter()
+            .next()
+            .map(|entry| entry.path)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no saved sessions found"));
+    }
+
+    let mut matches = entries
+        .into_iter()
+        .filter(|entry| entry.id.contains(target) || entry.preview.contains(target))
+        .collect::<Vec<_>>();
+    if matches.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("no saved session matched '{target}'"),
+        ));
+    }
+    matches.sort_by(|left, right| right.updated_unix.cmp(&left.updated_unix));
+    Ok(matches.remove(0).path)
+}
+
+fn load_session_entries(query: Option<&str>, limit: usize) -> io::Result<Vec<SessionListEntry>> {
+    let session_dir = default_session_dir()?;
+    if !session_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let query = query.map(str::to_lowercase);
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(session_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().and_then(|extension| extension.to_str()) != Some("json") {
+            continue;
+        }
+
+        let Ok(session) = Session::load_from_path(&path) else {
+            continue;
+        };
+
+        let preview = session_preview(&session);
+        let id = path
+            .file_stem()
+            .map_or_else(String::new, |stem| stem.to_string_lossy().into_owned());
+        let searchable = format!("{} {}", id.to_lowercase(), preview.to_lowercase());
+        if let Some(query) = &query {
+            if !searchable.contains(query) {
+                continue;
+            }
+        }
+
+        let updated_unix = entry
+            .metadata()
+            .and_then(|metadata| metadata.modified())
+            .ok()
+            .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+            .map_or(0, |duration| duration.as_secs());
+
+        entries.push(SessionListEntry {
+            id,
+            path,
+            updated_unix,
+            message_count: session.messages.len(),
+            total_tokens: runtime::UsageTracker::from_session(&session)
+                .cumulative_usage()
+                .total_tokens(),
+            preview,
+        });
+    }
+
+    entries.sort_by(|left, right| right.updated_unix.cmp(&left.updated_unix));
+    if limit < entries.len() {
+        entries.truncate(limit);
+    }
+    Ok(entries)
+}
+
+fn session_preview(session: &Session) -> String {
+    for message in session.messages.iter().rev() {
+        for block in &message.blocks {
+            if let ContentBlock::Text { text } = block {
+                let trimmed = text.trim();
+                if !trimmed.is_empty() {
+                    return truncate_preview(trimmed, 80);
+                }
+            }
+        }
+    }
+    "No text preview available".to_string()
+}
+
+fn truncate_preview(text: &str, max_chars: usize) -> String {
+    if text.chars().count() <= max_chars {
+        return text.to_string();
+    }
+    let mut output = text.chars().take(max_chars).collect::<String>();
+    output.push('…');
+    output
 }
 
 fn build_system_prompt() -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -671,15 +911,19 @@ fn print_help() {
     );
     println!("  rusty-claude-cli dump-manifests");
     println!("  rusty-claude-cli bootstrap-plan");
+    println!("  rusty-claude-cli sessions [--query TEXT] [--limit N]");
+    println!("  rusty-claude-cli resume <latest|SESSION|PATH> [/compact]");
     println!("  rusty-claude-cli system-prompt [--cwd PATH] [--date YYYY-MM-DD]");
     println!("  rusty-claude-cli --resume SESSION.json [/compact]");
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_args, CliAction, DEFAULT_MODEL};
-    use runtime::{ContentBlock, ConversationMessage, MessageRole};
+    use super::{parse_args, resolve_session_target, session_preview, CliAction, DEFAULT_MODEL};
+    use runtime::{ContentBlock, ConversationMessage, MessageRole, Session};
+    use std::fs;
     use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn defaults_to_repl_when_no_args() {
@@ -742,6 +986,40 @@ mod tests {
     }
 
     #[test]
+    fn parses_sessions_subcommand() {
+        let args = vec![
+            "sessions".to_string(),
+            "--query".to_string(),
+            "compact".to_string(),
+            "--limit".to_string(),
+            "5".to_string(),
+        ];
+        assert_eq!(
+            parse_args(&args).expect("args should parse"),
+            CliAction::ListSessions {
+                query: Some("compact".to_string()),
+                limit: 5,
+            }
+        );
+    }
+
+    #[test]
+    fn parses_named_resume_subcommand() {
+        let args = vec![
+            "resume".to_string(),
+            "latest".to_string(),
+            "/compact".to_string(),
+        ];
+        assert_eq!(
+            parse_args(&args).expect("args should parse"),
+            CliAction::ResumeNamed {
+                target: "latest".to_string(),
+                command: Some("/compact".to_string()),
+            }
+        );
+    }
+
+    #[test]
     fn converts_tool_roundtrip_messages() {
         let messages = vec![
             ConversationMessage::user_text("hello"),
@@ -766,5 +1044,31 @@ mod tests {
         assert_eq!(converted.len(), 3);
         assert_eq!(converted[1].role, "assistant");
         assert_eq!(converted[2].role, "user");
+    }
+
+    #[test]
+    fn builds_preview_from_latest_text_block() {
+        let session = Session {
+            version: 1,
+            messages: vec![
+                ConversationMessage::user_text("first"),
+                ConversationMessage::assistant(vec![ContentBlock::Text {
+                    text: "latest preview".to_string(),
+                }]),
+            ],
+        };
+        assert_eq!(session_preview(&session), "latest preview");
+    }
+
+    #[test]
+    fn resolves_direct_session_path() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |duration| duration.as_nanos());
+        let path = std::env::temp_dir().join(format!("rusty-claude-session-{unique}.json"));
+        fs::write(&path, "{\"version\":1,\"messages\":[]}").expect("temp session");
+        let resolved = resolve_session_target(path.to_string_lossy().as_ref()).expect("resolve");
+        assert_eq!(resolved, path);
+        fs::remove_file(resolved).expect("cleanup");
     }
 }

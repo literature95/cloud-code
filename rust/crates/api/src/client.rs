@@ -311,18 +311,38 @@ mod tests {
 
     #[test]
     fn read_api_key_requires_presence() {
+        let previous_auth = std::env::var("ANTHROPIC_AUTH_TOKEN").ok();
+        let previous_key = std::env::var("ANTHROPIC_API_KEY").ok();
         std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
         std::env::remove_var("ANTHROPIC_API_KEY");
         let error = super::read_api_key().expect_err("missing key should error");
         assert!(matches!(error, crate::error::ApiError::MissingApiKey));
+        match previous_auth {
+            Some(value) => std::env::set_var("ANTHROPIC_AUTH_TOKEN", value),
+            None => std::env::remove_var("ANTHROPIC_AUTH_TOKEN"),
+        }
+        match previous_key {
+            Some(value) => std::env::set_var("ANTHROPIC_API_KEY", value),
+            None => std::env::remove_var("ANTHROPIC_API_KEY"),
+        }
     }
 
     #[test]
     fn read_api_key_requires_non_empty_value() {
+        let previous_auth = std::env::var("ANTHROPIC_AUTH_TOKEN").ok();
+        let previous_key = std::env::var("ANTHROPIC_API_KEY").ok();
         std::env::set_var("ANTHROPIC_AUTH_TOKEN", "");
         std::env::remove_var("ANTHROPIC_API_KEY");
         let error = super::read_api_key().expect_err("empty key should error");
         assert!(matches!(error, crate::error::ApiError::MissingApiKey));
+        match previous_auth {
+            Some(value) => std::env::set_var("ANTHROPIC_AUTH_TOKEN", value),
+            None => std::env::remove_var("ANTHROPIC_AUTH_TOKEN"),
+        }
+        match previous_key {
+            Some(value) => std::env::set_var("ANTHROPIC_API_KEY", value),
+            None => std::env::remove_var("ANTHROPIC_API_KEY"),
+        }
     }
 
     #[test]
