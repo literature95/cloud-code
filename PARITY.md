@@ -1,187 +1,187 @@
-# Parity Status — claw-code Rust Port
+# 一致性状态 — claw-code Rust 移植
 
-Last updated: 2026-04-03
+最后更新：2026-04-03
 
-## Summary
+## 摘要
 
-- Canonical document: this top-level `PARITY.md` is the file consumed by `rust/scripts/run_mock_parity_diff.py`.
-- Requested 9-lane checkpoint: **All 9 lanes merged on `main`.**
-- Current `main` HEAD: `ee31e00` (stub implementations replaced with real AskUserQuestion + RemoteTrigger).
-- Repository stats at this checkpoint: **292 commits on `main` / 293 across all branches**, **9 crates**, **48,599 tracked Rust LOC**, **2,568 test LOC**, **3 authors**, date range **2026-03-31 → 2026-04-03**.
-- Mock parity harness stats: **10 scripted scenarios**, **19 captured `/v1/messages` requests** in `rust/crates/rusty-claude-cli/tests/mock_parity_harness.rs`.
+- 规范文档：这个顶级 `PARITY.md` 文件被 `rust/scripts/run_mock_parity_diff.py` 消费。
+- 请求的 9 通道检查点：**所有 9 个通道都已合并到 `main` 分支。**
+- 当前 `main` 分支 HEAD：`ee31e00`（存根实现已替换为真实的 AskUserQuestion + RemoteTrigger）。
+- 此检查点的仓库统计：**`main` 分支上有 292 个提交 / 所有分支共 293 个提交**，**9 个 crates**，**48,599 行跟踪的 Rust 代码**，**2,568 行测试代码**，**3 位作者**，日期范围 **2026-03-31 → 2026-04-03**。
+- Mock 一致性测试工具统计：**10 个脚本化场景**，**19 个捕获的 `/v1/messages` 请求**，位于 `rust/crates/rusty-claude-cli/tests/mock_parity_harness.rs`。
 
-## Mock parity harness — milestone 1
+## Mock 一致性测试工具 — 里程碑 1
 
-- [x] Deterministic Anthropic-compatible mock service (`rust/crates/mock-anthropic-service`)
-- [x] Reproducible clean-environment CLI harness (`rust/crates/rusty-claude-cli/tests/mock_parity_harness.rs`)
-- [x] Scripted scenarios: `streaming_text`, `read_file_roundtrip`, `grep_chunk_assembly`, `write_file_allowed`, `write_file_denied`
+- [x] 确定性的 Anthropic 兼容 mock 服务（`rust/crates/mock-anthropic-service`）
+- [x] 可重现的干净环境 CLI 测试工具（`rust/crates/rusty-claude-cli/tests/mock_parity_harness.rs`）
+- [x] 脚本化场景：`streaming_text`、`read_file_roundtrip`、`grep_chunk_assembly`、`write_file_allowed`、`write_file_denied`
 
-## Mock parity harness — milestone 2 (behavioral expansion)
+## Mock 一致性测试工具 — 里程碑 2（行为扩展）
 
-- [x] Scripted multi-tool turn coverage: `multi_tool_turn_roundtrip`
-- [x] Scripted bash coverage: `bash_stdout_roundtrip`
-- [x] Scripted permission prompt coverage: `bash_permission_prompt_approved`, `bash_permission_prompt_denied`
-- [x] Scripted plugin-path coverage: `plugin_tool_roundtrip`
-- [x] Behavioral diff/checklist runner: `rust/scripts/run_mock_parity_diff.py`
+- [x] 脚本化多工具回合覆盖：`multi_tool_turn_roundtrip`
+- [x] 脚本化 bash 覆盖：`bash_stdout_roundtrip`
+- [x] 脚本化权限提示覆盖：`bash_permission_prompt_approved`、`bash_permission_prompt_denied`
+- [x] 脚本化插件路径覆盖：`plugin_tool_roundtrip`
+- [x] 行为差异/清单运行器：`rust/scripts/run_mock_parity_diff.py`
 
-## Harness v2 behavioral checklist
+## 测试工具 v2 行为清单
 
-Canonical scenario map: `rust/mock_parity_scenarios.json`
+规范场景映射：`rust/mock_parity_scenarios.json`
 
-- Multi-tool assistant turns
-- Bash flow roundtrips
-- Permission enforcement across tool paths
-- Plugin tool execution path
-- File tools — harness-validated flows
-- Streaming response support validated by the mock parity harness
+- 多工具助手回合
+- Bash 流程往返
+- 跨工具路径的权限强制执行
+- 插件工具执行路径
+- 文件工具 — 测试工具验证的流程
+- 由 mock 一致性测试工具验证的流式响应支持
 
-## 9-lane checkpoint
+## 9 通道检查点
 
-| Lane | Status | Feature commit | Merge commit | Evidence |
+| 通道 | 状态 | 功能提交 | 合并提交 | 证据 |
 |---|---|---|---|---|
-| 1. Bash validation | merged | `36dac6c` | `1cfd78a` | `jobdori/bash-validation-submodules`, `rust/crates/runtime/src/bash_validation.rs` (`+1004` on `main`) |
-| 2. CI fix | merged | `89104eb` | `f1969ce` | `rust/crates/runtime/src/sandbox.rs` (`+22/-1`) |
-| 3. File-tool | merged | `284163b` | `a98f2b6` | `rust/crates/runtime/src/file_ops.rs` (`+195/-1`) |
-| 4. TaskRegistry | merged | `5ea138e` | `21a1e1d` | `rust/crates/runtime/src/task_registry.rs` (`+336`) |
-| 5. Task wiring | merged | `e8692e4` | `d994be6` | `rust/crates/tools/src/lib.rs` (`+79/-35`) |
-| 6. Team+Cron | merged | `c486ca6` | `49653fe` | `rust/crates/runtime/src/team_cron_registry.rs`, `rust/crates/tools/src/lib.rs` (`+441/-37`) |
-| 7. MCP lifecycle | merged | `730667f` | `cc0f92e` | `rust/crates/runtime/src/mcp_tool_bridge.rs`, `rust/crates/tools/src/lib.rs` (`+491/-24`) |
-| 8. LSP client | merged | `2d66503` | `d7f0dc6` | `rust/crates/runtime/src/lsp_client.rs`, `rust/crates/tools/src/lib.rs` (`+461/-9`) |
-| 9. Permission enforcement | merged | `66283f4` | `336f820` | `rust/crates/runtime/src/permission_enforcer.rs`, `rust/crates/tools/src/lib.rs` (`+357`) |
+| 1. Bash 验证 | 已合并 | `36dac6c` | `1cfd78a` | `jobdori/bash-validation-submodules`，`rust/crates/runtime/src/bash_validation.rs`（在 `main` 分支上 `+1004`） |
+| 2. CI 修复 | 已合并 | `89104eb` | `f1969ce` | `rust/crates/runtime/src/sandbox.rs`（`+22/-1`） |
+| 3. 文件工具 | 已合并 | `284163b` | `a98f2b6` | `rust/crates/runtime/src/file_ops.rs`（`+195/-1`） |
+| 4. TaskRegistry | 已合并 | `5ea138e` | `21a1e1d` | `rust/crates/runtime/src/task_registry.rs`（`+336`） |
+| 5. 任务接线 | 已合并 | `e8692e4` | `d994be6` | `rust/crates/tools/src/lib.rs`（`+79/-35`） |
+| 6. 团队+定时任务 | 已合并 | `c486ca6` | `49653fe` | `rust/crates/runtime/src/team_cron_registry.rs`，`rust/crates/tools/src/lib.rs`（`+441/-37`） |
+| 7. MCP 生命周期 | 已合并 | `730667f` | `cc0f92e` | `rust/crates/runtime/src/mcp_tool_bridge.rs`，`rust/crates/tools/src/lib.rs`（`+491/-24`） |
+| 8. LSP 客户端 | 已合并 | `2d66503` | `d7f0dc6` | `rust/crates/runtime/src/lsp_client.rs`，`rust/crates/tools/src/lib.rs`（`+461/-9`） |
+| 9. 权限强制执行 | 已合并 | `66283f4` | `336f820` | `rust/crates/runtime/src/permission_enforcer.rs`，`rust/crates/tools/src/lib.rs`（`+357`） |
 
-## Lane details
+## 通道详情
 
-### Lane 1 — Bash validation
+### 通道 1 — Bash 验证
 
-- **Status:** merged on `main`.
-- **Feature commit:** `36dac6c` — `feat: add bash validation submodules — readOnlyValidation, destructiveCommandWarning, modeValidation, sedValidation, pathValidation, commandSemantics`
-- **Evidence:** branch-only diff adds `rust/crates/runtime/src/bash_validation.rs` and a `runtime::lib` export (`+1005` across 2 files).
-- **Main-branch reality:** `rust/crates/runtime/src/bash.rs` is still the active on-`main` implementation at **283 LOC**, with timeout/background/sandbox execution. `PermissionEnforcer::check_bash()` adds read-only gating on `main`, but the dedicated validation module is not landed.
+- **状态：** 已合并到 `main` 分支。
+- **功能提交：** `36dac6c` — `feat: add bash validation submodules — readOnlyValidation, destructiveCommandWarning, modeValidation, sedValidation, pathValidation, commandSemantics`
+- **证据：** 仅分支差异添加了 `rust/crates/runtime/src/bash_validation.rs` 和 `runtime::lib` 导出（跨 2 个文件 `+1005`）。
+- **主分支实际情况：** `rust/crates/runtime/src/bash.rs` 仍然是 `main` 分支上的活跃实现，共 **283 行代码**，具有超时/后台/沙箱执行。`PermissionEnforcer::check_bash()` 在 `main` 分支上添加了只读门控，但专用验证模块尚未落地。
 
-### Bash tool — upstream has 18 submodules, Rust has 1:
+### Bash 工具 — 上游有 18 个子模块，Rust 有 1 个：
 
-- On `main`, this statement is still materially true.
-- Harness coverage proves bash execution and prompt escalation flows, but not the full upstream validation matrix.
-- The branch-only lane targets `readOnlyValidation`, `destructiveCommandWarning`, `modeValidation`, `sedValidation`, `pathValidation`, and `commandSemantics`.
+- 在 `main` 分支上，此陈述仍然基本正确。
+- 测试工具覆盖证明了 bash 执行和提示升级流程，但不是完整的上游验证矩阵。
+- 仅分支通道针对 `readOnlyValidation`、`destructiveCommandWarning`、`modeValidation`、`sedValidation`、`pathValidation` 和 `commandSemantics`。
 
-### Lane 2 — CI fix
+### 通道 2 — CI 修复
 
-- **Status:** merged on `main`.
-- **Feature commit:** `89104eb` — `fix(sandbox): probe unshare capability instead of binary existence`
-- **Merge commit:** `f1969ce` — `Merge jobdori/fix-ci-sandbox: probe unshare capability for CI fix`
-- **Evidence:** `rust/crates/runtime/src/sandbox.rs` is **385 LOC** and now resolves sandbox support from actual `unshare` capability and container signals instead of assuming support from binary presence alone.
-- **Why it matters:** `.github/workflows/rust-ci.yml` runs `cargo fmt --all --check` and `cargo test -p rusty-claude-cli`; this lane removed a CI-specific sandbox assumption from runtime behavior.
+- **状态：** 已合并到 `main` 分支。
+- **功能提交：** `89104eb` — `fix(sandbox): probe unshare capability instead of binary existence`
+- **合并提交：** `f1969ce` — `Merge jobdori/fix-ci-sandbox: probe unshare capability for CI fix`
+- **证据：** `rust/crates/runtime/src/sandbox.rs` 共 **385 行代码**，现在从实际的 `unshare` 能力和容器信号解析沙箱支持，而不是仅从二进制存在假设支持。
+- **重要性：** `.github/workflows/rust-ci.yml` 运行 `cargo fmt --all --check` 和 `cargo test -p rusty-claude-cli`；此通道从运行时行为中移除了 CI 特定的沙箱假设。
 
-### Lane 3 — File-tool
+### 通道 3 — 文件工具
 
-- **Status:** merged on `main`.
-- **Feature commit:** `284163b` — `feat(file_ops): add edge-case guards — binary detection, size limits, workspace boundary, symlink escape`
-- **Merge commit:** `a98f2b6` — `Merge jobdori/file-tool-edge-cases: binary detection, size limits, workspace boundary guards`
-- **Evidence:** `rust/crates/runtime/src/file_ops.rs` is **744 LOC** and now includes `MAX_READ_SIZE`, `MAX_WRITE_SIZE`, NUL-byte binary detection, and canonical workspace-boundary validation.
-- **Harness coverage:** `read_file_roundtrip`, `grep_chunk_assembly`, `write_file_allowed`, and `write_file_denied` are in the manifest and exercised by the clean-env harness.
+- **状态：** 已合并到 `main` 分支。
+- **功能提交：** `284163b` — `feat(file_ops): add edge-case guards — binary detection, size limits, workspace boundary, symlink escape`
+- **合并提交：** `a98f2b6` — `Merge jobdori/file-tool-edge-cases: binary detection, size limits, workspace boundary guards`
+- **证据：** `rust/crates/runtime/src/file_ops.rs` 共 **744 行代码**，现在包括 `MAX_READ_SIZE`、`MAX_WRITE_SIZE`、NUL 字节二进制检测和规范工作区边界验证。
+- **测试工具覆盖：** `read_file_roundtrip`、`grep_chunk_assembly`、`write_file_allowed` 和 `write_file_denied` 在清单中，并由干净环境测试工具执行。
 
-### File tools — harness-validated flows
+### 文件工具 — 测试工具验证的流程
 
-- `read_file_roundtrip` checks read-path execution and final synthesis.
-- `grep_chunk_assembly` checks chunked grep tool output handling.
-- `write_file_allowed` and `write_file_denied` validate both write success and permission denial.
+- `read_file_roundtrip` 检查读取路径执行和最终合成。
+- `grep_chunk_assembly` 检查分块 grep 工具输出处理。
+- `write_file_allowed` 和 `write_file_denied` 验证写入成功和权限拒绝。
 
-### Lane 4 — TaskRegistry
+### 通道 4 — TaskRegistry
 
-- **Status:** merged on `main`.
-- **Feature commit:** `5ea138e` — `feat(runtime): add TaskRegistry — in-memory task lifecycle management`
-- **Merge commit:** `21a1e1d` — `Merge jobdori/task-runtime: TaskRegistry in-memory lifecycle management`
-- **Evidence:** `rust/crates/runtime/src/task_registry.rs` is **335 LOC** and provides `create`, `get`, `list`, `stop`, `update`, `output`, `append_output`, `set_status`, and `assign_team` over a thread-safe in-memory registry.
-- **Scope:** this lane replaces pure fixed-payload stub state with real runtime-backed task records, but it does not add external subprocess execution by itself.
+- **状态：** 已合并到 `main` 分支。
+- **功能提交：** `5ea138e` — `feat(runtime): add TaskRegistry — in-memory task lifecycle management`
+- **合并提交：** `21a1e1d` — `Merge jobdori/task-runtime: TaskRegistry in-memory lifecycle management`
+- **证据：** `rust/crates/runtime/src/task_registry.rs` 共 **335 行代码**，通过线程安全的内存注册表提供 `create`、`get`、`list`、`stop`、`update`、`output`、`append_output`、`set_status` 和 `assign_team`。
+- **范围：** 此通道用真实的运行时支持的任务记录替换纯固定有效负载存根状态，但本身不添加外部子进程执行。
 
-### Lane 5 — Task wiring
+### 通道 5 — 任务接线
 
-- **Status:** merged on `main`.
-- **Feature commit:** `e8692e4` — `feat(tools): wire TaskRegistry into task tool dispatch`
-- **Merge commit:** `d994be6` — `Merge jobdori/task-registry-wiring: real TaskRegistry backing for all 6 task tools`
-- **Evidence:** `rust/crates/tools/src/lib.rs` dispatches `TaskCreate`, `TaskGet`, `TaskList`, `TaskStop`, `TaskUpdate`, and `TaskOutput` through `execute_tool()` and concrete `run_task_*` handlers.
-- **Current state:** task tools now expose real registry state on `main` via `global_task_registry()`.
+- **状态：** 已合并到 `main` 分支。
+- **功能提交：** `e8692e4` — `feat(tools): wire TaskRegistry into task tool dispatch`
+- **合并提交：** `d994be6` — `Merge jobdori/task-registry-wiring: real TaskRegistry backing for all 6 task tools`
+- **证据：** `rust/crates/tools/src/lib.rs` 通过 `execute_tool()` 和具体的 `run_task_*` 处理程序调度 `TaskCreate`、`TaskGet`、`TaskList`、`TaskStop`、`TaskUpdate` 和 `TaskOutput`。
+- **当前状态：** 任务工具现在通过 `global_task_registry()` 在 `main` 分支上公开真实的注册表状态。
 
-### Lane 6 — Team+Cron
+### 通道 6 — 团队+定时任务
 
-- **Status:** merged on `main`.
-- **Feature commit:** `c486ca6` — `feat(runtime+tools): TeamRegistry and CronRegistry — replace team/cron stubs`
-- **Merge commit:** `49653fe` — `Merge jobdori/team-cron-runtime: TeamRegistry + CronRegistry wired into tool dispatch`
-- **Evidence:** `rust/crates/runtime/src/team_cron_registry.rs` is **363 LOC** and adds thread-safe `TeamRegistry` and `CronRegistry`; `rust/crates/tools/src/lib.rs` wires `TeamCreate`, `TeamDelete`, `CronCreate`, `CronDelete`, and `CronList` into those registries.
-- **Current state:** team/cron tools now have in-memory lifecycle behavior on `main`; they still stop short of a real background scheduler or worker fleet.
+- **状态：** 已合并到 `main` 分支。
+- **功能提交：** `c486ca6` — `feat(runtime+tools): TeamRegistry and CronRegistry — replace team/cron stubs`
+- **合并提交：** `49653fe` — `Merge jobdori/team-cron-runtime: TeamRegistry + CronRegistry wired into tool dispatch`
+- **证据：** `rust/crates/runtime/src/team_cron_registry.rs` 共 **363 行代码**，添加了线程安全的 `TeamRegistry` 和 `CronRegistry`；`rust/crates/tools/src/lib.rs` 将 `TeamCreate`、`TeamDelete`、`CronCreate`、`CronDelete` 和 `CronList` 接线到这些注册表。
+- **当前状态：** 团队/定时任务工具现在在 `main` 分支上具有内存生命周期行为；它们仍然缺少真正的后台调度程序或工作线程 fleet。
 
-### Lane 7 — MCP lifecycle
+### 通道 7 — MCP 生命周期
 
-- **Status:** merged on `main`.
-- **Feature commit:** `730667f` — `feat(runtime+tools): McpToolRegistry — MCP lifecycle bridge for tool surface`
-- **Merge commit:** `cc0f92e` — `Merge jobdori/mcp-lifecycle: McpToolRegistry lifecycle bridge for all MCP tools`
-- **Evidence:** `rust/crates/runtime/src/mcp_tool_bridge.rs` is **406 LOC** and tracks server connection status, resource listing, resource reads, tool listing, tool dispatch acknowledgements, auth state, and disconnects.
-- **Wiring:** `rust/crates/tools/src/lib.rs` routes `ListMcpResources`, `ReadMcpResource`, `McpAuth`, and `MCP` into `global_mcp_registry()` handlers.
-- **Scope:** this lane replaces pure stub responses with a registry bridge on `main`; end-to-end MCP connection population and broader transport/runtime depth still depend on the wider MCP runtime (`mcp_stdio.rs`, `mcp_client.rs`, `mcp.rs`).
+- **状态：** 已合并到 `main` 分支。
+- **功能提交：** `730667f` — `feat(runtime+tools): McpToolRegistry — MCP lifecycle bridge for tool surface`
+- **合并提交：** `cc0f92e` — `Merge jobdori/mcp-lifecycle: McpToolRegistry lifecycle bridge for all MCP tools`
+- **证据：** `rust/crates/runtime/src/mcp_tool_bridge.rs` 共 **406 行代码**，跟踪服务器连接状态、资源列表、资源读取、工具列表、工具调度确认、认证状态和断开连接。
+- **接线：** `rust/crates/tools/src/lib.rs` 将 `ListMcpResources`、`ReadMcpResource`、`McpAuth` 和 `MCP` 路由到 `global_mcp_registry()` 处理程序。
+- **范围：** 此通道用 `main` 分支上的注册表桥替换纯存根响应；端到端 MCP 连接填充和更广泛的传输/运行时深度仍然依赖于更广泛的 MCP 运行时（`mcp_stdio.rs`、`mcp_client.rs`、`mcp.rs`）。
 
-### Lane 8 — LSP client
+### 通道 8 — LSP 客户端
 
-- **Status:** merged on `main`.
-- **Feature commit:** `2d66503` — `feat(runtime+tools): LspRegistry — LSP client dispatch for tool surface`
-- **Merge commit:** `d7f0dc6` — `Merge jobdori/lsp-client: LspRegistry dispatch for all LSP tool actions`
-- **Evidence:** `rust/crates/runtime/src/lsp_client.rs` is **438 LOC** and models diagnostics, hover, definition, references, completion, symbols, and formatting across a stateful registry.
-- **Wiring:** the exposed `LSP` tool schema in `rust/crates/tools/src/lib.rs` currently enumerates `symbols`, `references`, `diagnostics`, `definition`, and `hover`, then routes requests through `registry.dispatch(action, path, line, character, query)`.
-- **Scope:** current parity is registry/dispatch-level; completion/format support exists in the registry model, but not as clearly exposed at the tool schema boundary, and actual external language-server process orchestration remains separate.
+- **状态：** 已合并到 `main` 分支。
+- **功能提交：** `2d66503` — `feat(runtime+tools): LspRegistry — LSP client dispatch for tool surface`
+- **合并提交：** `d7f0dc6` — `Merge jobdori/lsp-client: LspRegistry dispatch for all LSP tool actions`
+- **证据：** `rust/crates/runtime/src/lsp_client.rs` 共 **438 行代码**，通过有状态注册表建模诊断、悬停、定义、引用、完成、符号和格式化。
+- **接线：** `rust/crates/tools/src/lib.rs` 中暴露的 `LSP` 工具架构目前枚举 `symbols`、`references`、`diagnostics`、`definition` 和 `hover`，然后通过 `registry.dispatch(action, path, line, character, query)` 路由请求。
+- **范围：** 当前一致性是注册表/调度级别；完成/格式支持存在于注册表模型中，但在工具架构边界上未明确暴露，实际的外部语言服务器进程编排仍然是分开的。
 
-### Lane 9 — Permission enforcement
+### 通道 9 — 权限强制执行
 
-- **Status:** merged on `main`.
-- **Feature commit:** `66283f4` — `feat(runtime+tools): PermissionEnforcer — permission mode enforcement layer`
-- **Merge commit:** `336f820` — `Merge jobdori/permission-enforcement: PermissionEnforcer with workspace + bash enforcement`
-- **Evidence:** `rust/crates/runtime/src/permission_enforcer.rs` is **340 LOC** and adds tool gating, file write boundary checks, and bash read-only heuristics on top of `rust/crates/runtime/src/permissions.rs`.
-- **Wiring:** `rust/crates/tools/src/lib.rs` exposes `enforce_permission_check()` and carries per-tool `required_permission` values in tool specs.
+- **状态：** 已合并到 `main` 分支。
+- **功能提交：** `66283f4` — `feat(runtime+tools): PermissionEnforcer — permission mode enforcement layer`
+- **合并提交：** `336f820` — `Merge jobdori/permission-enforcement: PermissionEnforcer with workspace + bash enforcement`
+- **证据：** `rust/crates/runtime/src/permission_enforcer.rs` 共 **340 行代码**，在 `rust/crates/runtime/src/permissions.rs` 之上添加了工具门控、文件写入边界检查和 bash 只读启发式。
+- **接线：** `rust/crates/tools/src/lib.rs` 暴露 `enforce_permission_check()` 并在工具规范中携带每个工具的 `required_permission` 值。
 
-### Permission enforcement across tool paths
+### 跨工具路径的权限强制执行
 
-- Harness scenarios validate `write_file_denied`, `bash_permission_prompt_approved`, and `bash_permission_prompt_denied`.
-- `PermissionEnforcer::check()` delegates to `PermissionPolicy::authorize()` and returns structured allow/deny results.
-- `check_file_write()` enforces workspace boundaries and read-only denial; `check_bash()` denies mutating commands in read-only mode and blocks prompt-mode bash without confirmation.
+- 测试工具场景验证 `write_file_denied`、`bash_permission_prompt_approved` 和 `bash_permission_prompt_denied`。
+- `PermissionEnforcer::check()` 委托给 `PermissionPolicy::authorize()` 并返回结构化的允许/拒绝结果。
+- `check_file_write()` 强制执行工作区边界和只读拒绝；`check_bash()` 在只读模式下拒绝突变命令，并在没有确认的情况下阻止提示模式 bash。
 
-## Tool Surface: 40 exposed tool specs on `main`
+## 工具表面：`main` 分支上的 40 个暴露工具规范
 
-- `mvp_tool_specs()` in `rust/crates/tools/src/lib.rs` exposes **40** tool specs.
-- Core execution is present for `bash`, `read_file`, `write_file`, `edit_file`, `glob_search`, and `grep_search`.
-- Existing product tools in `mvp_tool_specs()` include `WebFetch`, `WebSearch`, `TodoWrite`, `Skill`, `Agent`, `ToolSearch`, `NotebookEdit`, `Sleep`, `SendUserMessage`, `Config`, `EnterPlanMode`, `ExitPlanMode`, `StructuredOutput`, `REPL`, and `PowerShell`.
-- The 9-lane push replaced pure fixed-payload stubs for `Task*`, `Team*`, `Cron*`, `LSP`, and MCP tools with registry-backed handlers on `main`.
-- `Brief` is handled as an execution alias in `execute_tool()`, but it is not a separately exposed tool spec in `mvp_tool_specs()`.
+- `rust/crates/tools/src/lib.rs` 中的 `mvp_tool_specs()` 暴露 **40** 个工具规范。
+- 核心执行存在于 `bash`、`read_file`、`write_file`、`edit_file`、`glob_search` 和 `grep_search` 中。
+- `mvp_tool_specs()` 中的现有产品工具包括 `WebFetch`、`WebSearch`、`TodoWrite`、`Skill`、`Agent`、`ToolSearch`、`NotebookEdit`、`Sleep`、`SendUserMessage`、`Config`、`EnterPlanMode`、`ExitPlanMode`、`StructuredOutput`、`REPL` 和 `PowerShell`。
+- 9 通道推送将 `Task*`、`Team*`、`Cron*`、`LSP` 和 MCP 工具的纯固定有效负载存根替换为 `main` 分支上的注册表支持处理程序。
+- `Brief` 在 `execute_tool()` 中作为执行别名处理，但它不是 `mvp_tool_specs()` 中单独暴露的工具规范。
 
-### Still limited or intentionally shallow
+### 仍然有限或有意浅薄
 
-- `AskUserQuestion` still returns a pending response payload rather than real interactive UI wiring.
-- `RemoteTrigger` remains a stub response.
-- `TestingPermission` remains test-only.
-- Task, team, cron, MCP, and LSP are no longer just fixed-payload stubs in `execute_tool()`, but several remain registry-backed approximations rather than full external-runtime integrations.
-- Bash deep validation remains branch-only until `36dac6c` is merged.
+- `AskUserQuestion` 仍然返回挂起的响应有效负载，而不是真正的交互式 UI 接线。
+- `RemoteTrigger` 仍然是存根响应。
+- `TestingPermission` 仍然仅用于测试。
+- 任务、团队、定时任务、MCP 和 LSP 不再只是 `execute_tool()` 中的固定有效负载存根，但其中几个仍然是注册表支持的近似值，而不是完整的外部运行时集成。
+- Bash 深度验证在 `36dac6c` 合并之前仍然仅存在于分支中。
 
-## Reconciled from the older PARITY checklist
+## 从旧 PARITY 清单协调
 
-- [x] Path traversal prevention (symlink following, `../` escapes)
-- [x] Size limits on read/write
-- [x] Binary file detection
-- [x] Permission mode enforcement (read-only vs workspace-write)
-- [x] Config merge precedence (user > project > local) — `ConfigLoader::discover()` loads user → project → local, and `loads_and_merges_claude_code_config_files_by_precedence()` verifies the merge order.
-- [x] Plugin install/enable/disable/uninstall flow — `/plugin` slash handling in `rust/crates/commands/src/lib.rs` delegates to `PluginManager::{install, enable, disable, uninstall}` in `rust/crates/plugins/src/lib.rs`.
-- [x] No `#[ignore]` tests hiding failures — `grep` over `rust/**/*.rs` found 0 ignored tests.
+- [x] 路径遍历预防（符号链接跟随，`../` 转义）
+- [x] 读/写大小限制
+- [x] 二进制文件检测
+- [x] 权限模式强制执行（只读 vs 工作区写入）
+- [x] 配置合并优先级（用户 > 项目 > 本地）— `ConfigLoader::discover()` 加载用户 → 项目 → 本地，`loads_and_merges_claude_code_config_files_by_precedence()` 验证合并顺序。
+- [x] 插件安装/启用/禁用/卸载流程 — `rust/crates/commands/src/lib.rs` 中的 `/plugin` 斜杠处理委托给 `rust/crates/plugins/src/lib.rs` 中的 `PluginManager::{install, enable, disable, uninstall}`。
+- [x] 无 `#[ignore]` 测试隐藏失败 — 对 `rust/**/*.rs` 的 `grep` 发现 0 个被忽略的测试。
 
-## Still open
+## 仍然开放
 
-- [ ] End-to-end MCP runtime lifecycle beyond the registry bridge now on `main`
-- [x] Output truncation (large stdout/file content)
-- [ ] Session compaction behavior matching
-- [ ] Token counting / cost tracking accuracy
-- [x] Bash validation lane merged onto `main`
-- [ ] CI green on every commit
+- [ ] 超出现在 `main` 分支上的注册表桥的端到端 MCP 运行时生命周期
+- [x] 输出截断（大 stdout/文件内容）
+- [ ] 会话压缩行为匹配
+- [ ] 令牌计数/成本跟踪准确性
+- [x] Bash 验证通道合并到 `main` 分支
+- [ ] 每个提交的 CI 绿色
 
-## Migration Readiness
+## 迁移准备
 
-- [x] `PARITY.md` maintained and honest
-- [x] 9 requested lanes documented with commit hashes and current status
-- [x] All 9 requested lanes landed on `main` (`bash-validation` is still branch-only)
-- [x] No `#[ignore]` tests hiding failures
-- [ ] CI green on every commit
-- [x] Codebase shape clean enough for handoff documentation
+- [x] `PARITY.md` 维护和诚实
+- [x] 9 个请求的通道记录了提交哈希和当前状态
+- [x] 所有 9 个请求的通道都已登陆 `main` 分支（`bash-validation` 仍然仅存在于分支中）
+- [x] 无 `#[ignore]` 测试隐藏失败
+- [ ] 每个提交的 CI 绿色
+- [x] 代码库形状足够干净，可用于交接文档

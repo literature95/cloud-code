@@ -1,361 +1,425 @@
 # ROADMAP.md
 
-# Clawable Coding Harness Roadmap
-
-## Goal
-
-Turn claw-code into the most **clawable** coding harness:
-- no human-first terminal assumptions
-- no fragile prompt injection timing
-- no opaque session state
-- no hidden plugin or MCP failures
-- no manual babysitting for routine recovery
-
-This roadmap assumes the primary users are **claws wired through hooks, plugins, sessions, and channel events**.
-
-## Definition of "clawable"
-
-A clawable harness is:
-- deterministic to start
-- machine-readable in state and failure modes
-- recoverable without a human watching the terminal
-- branch/test/worktree aware
-- plugin/MCP lifecycle aware
-- event-first, not log-first
-- capable of autonomous next-step execution
-
-## Current Pain Points
-
-### 1. Session boot is fragile
-- trust prompts can block TUI startup
-- prompts can land in the shell instead of the coding agent
-- "session exists" does not mean "session is ready"
-
-### 2. Truth is split across layers
-- tmux state
-- clawhip event stream
-- git/worktree state
-- test state
-- gateway/plugin/MCP runtime state
-
-### 3. Events are too log-shaped
-- claws currently infer too much from noisy text
-- important states are not normalized into machine-readable events
-
-### 4. Recovery loops are too manual
-- restart worker
-- accept trust prompt
-- re-inject prompt
-- detect stale branch
-- retry failed startup
-- classify infra vs code failures manually
-
-### 5. Branch freshness is not enforced enough
-- side branches can miss already-landed main fixes
-- broad test failures can be stale-branch noise instead of real regressions
-
-### 6. Plugin/MCP failures are under-classified
-- startup failures, handshake failures, config errors, partial startup, and degraded mode are not exposed cleanly enough
-
-### 7. Human UX still leaks into claw workflows
-- too much depends on terminal/TUI behavior instead of explicit agent state transitions and control APIs
-
-## Product Principles
-
-1. **State machine first** — every worker has explicit lifecycle states.
-2. **Events over scraped prose** — channel output should be derived from typed events.
-3. **Recovery before escalation** — known failure modes should auto-heal once before asking for help.
-4. **Branch freshness before blame** — detect stale branches before treating red tests as new regressions.
-5. **Partial success is first-class** — e.g. MCP startup can succeed for some servers and fail for others, with structured degraded-mode reporting.
-6. **Terminal is transport, not truth** — tmux/TUI may remain implementation details, but orchestration state must live above them.
-7. **Policy is executable** — merge, retry, rebase, stale cleanup, and escalation rules should be machine-enforced.
-
-## Roadmap
-
-## Phase 1 — Reliable Worker Boot
-
-### 1. Ready-handshake lifecycle for coding workers
-Add explicit states:
-- `spawning`
-- `trust_required`
-- `ready_for_prompt`
-- `prompt_accepted`
-- `running`
-- `blocked`
-- `finished`
-- `failed`
-
-Acceptance:
-- prompts are never sent before `ready_for_prompt`
-- trust prompt state is detectable and emitted
-- shell misdelivery becomes detectable as a first-class failure state
-
-### 2. Trust prompt resolver
-Add allowlisted auto-trust behavior for known repos/worktrees.
-
-Acceptance:
-- trusted repos auto-clear trust prompts
-- events emitted for `trust_required` and `trust_resolved`
-- non-allowlisted repos remain gated
-
-### 3. Structured session control API
-Provide machine control above tmux:
-- create worker
-- await ready
-- send task
-- fetch state
-- fetch last error
-- restart worker
-- terminate worker
-
-Acceptance:
-- a claw can operate a coding worker without raw send-keys as the primary control plane
-
-## Phase 2 — Event-Native Clawhip Integration
-
-### 4. Canonical lane event schema
-Define typed events such as:
-- `lane.started`
-- `lane.ready`
-- `lane.prompt_misdelivery`
-- `lane.blocked`
-- `lane.red`
-- `lane.green`
-- `lane.commit.created`
-- `lane.pr.opened`
-- `lane.merge.ready`
-- `lane.finished`
-- `lane.failed`
-- `branch.stale_against_main`
-
-Acceptance:
-- clawhip consumes typed lane events
-- Discord summaries are rendered from structured events instead of pane scraping alone
-
-### 5. Failure taxonomy
-Normalize failure classes:
-- `prompt_delivery`
-- `trust_gate`
-- `branch_divergence`
-- `compile`
-- `test`
-- `plugin_startup`
-- `mcp_startup`
-- `mcp_handshake`
-- `gateway_routing`
-- `tool_runtime`
-- `infra`
-
-Acceptance:
-- blockers are machine-classified
-- dashboards and retry policies can branch on failure type
-
-### 6. Actionable summary compression
-Collapse noisy event streams into:
-- current phase
-- last successful checkpoint
-- current blocker
-- recommended next recovery action
-
-Acceptance:
-- channel status updates stay short and machine-grounded
-- claws stop inferring state from raw build spam
-
-## Phase 3 — Branch/Test Awareness and Auto-Recovery
-
-### 7. Stale-branch detection before broad verification
-Before broad test runs, compare current branch to `main` and detect if known fixes are missing.
-
-Acceptance:
-- emit `branch.stale_against_main`
-- suggest or auto-run rebase/merge-forward according to policy
-- avoid misclassifying stale-branch failures as new regressions
-
-### 8. Recovery recipes for common failures
-Encode known automatic recoveries for:
-- trust prompt unresolved
-- prompt delivered to shell
-- stale branch
-- compile red after cross-crate refactor
-- MCP startup handshake failure
-- partial plugin startup
-
-Acceptance:
-- one automatic recovery attempt occurs before escalation
-- the attempted recovery is itself emitted as structured event data
-
-### 9. Green-ness contract
-Workers should distinguish:
-- targeted tests green
-- package green
-- workspace green
-- merge-ready green
-
-Acceptance:
-- no more ambiguous "tests passed" messaging
-- merge policy can require the correct green level for the lane type
-
-## Phase 4 — Claws-First Task Execution
-
-### 10. Typed task packet format
-Define a structured task packet with fields like:
-- objective
-- scope
-- repo/worktree
-- branch policy
-- acceptance tests
-- commit policy
-- reporting contract
-- escalation policy
-
-Acceptance:
-- claws can dispatch work without relying on long natural-language prompt blobs alone
-- task packets can be logged, retried, and transformed safely
-
-### 11. Policy engine for autonomous coding
-Encode automation rules such as:
-- if green + scoped diff + review passed -> merge to dev
-- if stale branch -> merge-forward before broad tests
-- if startup blocked -> recover once, then escalate
-- if lane completed -> emit closeout and cleanup session
-
-Acceptance:
-- doctrine moves from chat instructions into executable rules
-
-### 12. Claw-native dashboards / lane board
-Expose a machine-readable board of:
-- repos
-- active claws
-- worktrees
-- branch freshness
-- red/green state
-- current blocker
-- merge readiness
-- last meaningful event
-
-Acceptance:
-- claws can query status directly
-- human-facing views become a rendering layer, not the source of truth
-
-## Phase 5 — Plugin and MCP Lifecycle Maturity
-
-### 13. First-class plugin/MCP lifecycle contract
-Each plugin/MCP integration should expose:
-- config validation contract
-- startup healthcheck
-- discovery result
-- degraded-mode behavior
-- shutdown/cleanup contract
-
-Acceptance:
-- partial-startup and per-server failures are reported structurally
-- successful servers remain usable even when one server fails
-
-### 14. MCP end-to-end lifecycle parity
-Close gaps from:
-- config load
-- server registration
-- spawn/connect
-- initialize handshake
-- tool/resource discovery
-- invocation path
-- error surfacing
-- shutdown/cleanup
-
-Acceptance:
-- parity harness and runtime tests cover healthy and degraded startup cases
-- broken servers are surfaced as structured failures, not opaque warnings
-
-## Immediate Backlog (from current real pain)
-
-Priority order: P0 = blocks CI/green state, P1 = blocks integration wiring, P2 = clawability hardening, P3 = swarm-efficiency improvements.
-
-**P0 — Fix first (CI reliability)**
-1. Isolate `render_diff_report` tests into tmpdir — flaky under `cargo test --workspace`; reads real working-tree state; breaks CI during active worktree ops
-2. Expand GitHub CI from single-crate coverage to workspace-grade verification — current `rust-ci.yml` runs `cargo fmt` and `cargo test -p rusty-claude-cli`, but misses broader `cargo test --workspace` coverage that already passes locally
-3. Add release-grade binary workflow — repo has a Rust CLI and release intent, but no GitHub Actions path that builds tagged artifacts / checks release packaging before a publish step
-4. Add container-first test/run docs — runtime detects Docker/Podman/container state, but docs do not show a canonical container workflow for `cargo test --workspace`, binary execution, or bind-mounted repo usage
-5. Surface `doctor` / preflight diagnostics in onboarding docs and help — the CLI already has setup-diagnosis commands and branch preflight machinery, but they are not prominent enough in README/USAGE, so new users still ask manual setup questions instead of running a built-in health check first
-6. Add branding/source-of-truth residue checks for docs — after repo migration, old org names can survive in badges, star-history URLs, and copied snippets; docs need a consistency pass or CI lint to catch stale branding automatically
-7. Reconcile README product narrative with current repo reality — top-level docs now say the active workspace is Rust, but later sections still describe the repo as Python-first; users should not have to infer which implementation is canonical
-8. Eliminate warning spam from first-run help/build path — `cargo run -p rusty-claude-cli -- --help` currently prints a wall of compile warnings before the actual help text, which pollutes the first-touch UX and hides the product surface behind unrelated noise
-9. Promote `doctor` from slash-only to top-level CLI entrypoint — users naturally try `claw doctor`, but today it errors and tells them to enter a REPL or resume path first; healthcheck flows should be callable directly from the shell
-10. Make machine-readable status commands actually machine-readable — `status` and `sandbox` accept the global `--output-format json` flag path, but currently still render prose tables, which breaks shell automation and agent-friendly health polling
-11. Unify legacy config/skill namespaces in user-facing output — `skills` currently surfaces mixed project roots like `.codex` and `.claude`, which leaks historical layers into the current product and makes it unclear which config namespace is canonical
-12. Honor JSON output on inventory commands like `skills` and `mcp` — these are exactly the commands agents and shell scripts want to inspect programmatically, but `--output-format json` still yields prose, forcing text scraping where structured inventory should exist
-13. Audit `--output-format` contract across the whole CLI surface — current behavior is inconsistent by subcommand, so agents cannot trust the global flag without command-by-command probing; the format contract itself needs to become deterministic
-
-**P1 — Next (integration wiring, unblocks verification)**
-2. Add cross-module integration tests — **done**: 12 integration tests covering worker→recovery→policy, stale_branch→policy, green_contract→policy, reconciliation flows
-3. Wire lane-completion emitter — **done**: `lane_completion` module with `detect_lane_completion()` auto-sets `LaneContext::completed` from session-finished + tests-green + push-complete → policy closeout
-4. Wire `SummaryCompressor` into the lane event pipeline — **done**: `compress_summary_text()` feeds into `LaneEvent::Finished` detail field in `tools/src/lib.rs`
-
-**P2 — Clawability hardening (original backlog)**
-5. Worker readiness handshake + trust resolution — **done**: `WorkerStatus` state machine with `Spawning` → `TrustRequired` → `ReadyForPrompt` → `PromptAccepted` → `Running` lifecycle, `trust_auto_resolve` + `trust_gate_cleared` gating
-6. Prompt misdelivery detection and recovery — **done**: `prompt_delivery_attempts` counter, `PromptMisdelivery` event detection, `auto_recover_prompt_misdelivery` + `replay_prompt` recovery arm
-7. Canonical lane event schema in clawhip — **done**: `LaneEvent` enum with `Started/Blocked/Failed/Finished` variants, `LaneEvent::new()` typed constructor, `tools/src/lib.rs` integration
-8. Failure taxonomy + blocker normalization — **done**: `WorkerFailureKind` enum (`TrustGate/PromptDelivery/Protocol/Provider`), `FailureScenario::from_worker_failure_kind()` bridge to recovery recipes
-9. Stale-branch detection before workspace tests — **done**: `stale_branch.rs` module with freshness detection, behind/ahead metrics, policy integration
-10. MCP structured degraded-startup reporting — **done**: `McpManager` degraded-startup reporting (+183 lines in `mcp_stdio.rs`), failed server classification (startup/handshake/config/partial), structured `failed_servers` + `recovery_recommendations` in tool output
-11. Structured task packet format — **done**: `task_packet.rs` module with `TaskPacket` struct, validation, serialization, `TaskScope` resolution (workspace/module/single-file/custom), integrated into `tools/src/lib.rs`
-12. Lane board / machine-readable status API — **done**: Lane completion hardening + `LaneContext::completed` auto-detection + MCP degraded reporting surface machine-readable state
-13. **Session completion failure classification** — **done**: `WorkerFailureKind::Provider` + `observe_completion()` + recovery recipe bridge landed
-14. **Config merge validation gap** — **done**: `config.rs` hook validation before deep-merge (+56 lines), malformed entries fail with source-path context instead of merged parse errors
-15. **MCP manager discovery flaky test** — `manager_discovery_report_keeps_healthy_servers_when_one_server_fails` has intermittent timing issues in CI; temporarily ignored, needs root cause fix
-
-**P3 — Swarm efficiency**
-13. Swarm branch-lock protocol — detect same-module/same-branch collision before parallel workers drift into duplicate implementation
-14. Commit provenance / worktree-aware push events — emit branch, worktree, superseded-by, and canonical commit lineage so parallel sessions stop producing duplicate-looking push summaries
-
-## Suggested Session Split
-
-### Session A — worker boot protocol
-Focus:
-- trust prompt detection
-- ready-for-prompt handshake
-- prompt misdelivery detection
-
-### Session B — clawhip lane events
-Focus:
-- canonical lane event schema
-- failure taxonomy
-- summary compression
-
-### Session C — branch/test intelligence
-Focus:
-- stale-branch detection
-- green-level contract
-- recovery recipes
-
-### Session D — MCP lifecycle hardening
-Focus:
-- startup/handshake reliability
-- structured failed server reporting
-- degraded-mode runtime behavior
-- lifecycle tests/harness coverage
-
-### Session E — typed task packets + policy engine
-Focus:
-- structured task format
-- retry/merge/escalation rules
-- autonomous lane closure behavior
-
-## MVP Success Criteria
-
-We should consider claw-code materially more clawable when:
-- a claw can start a worker and know with certainty when it is ready
-- claws no longer accidentally type tasks into the shell
-- stale-branch failures are identified before they waste debugging time
-- clawhip reports machine states, not just tmux prose
-- MCP/plugin startup failures are classified and surfaced cleanly
-- a coding lane can self-recover from common startup and branch issues without human babysitting
-
-## Short Version
-
-claw-code should evolve from:
-- a CLI a human can also drive
-
-to:
-- a **claw-native execution runtime**
-- an **event-native orchestration substrate**
-- a **plugin/hook-first autonomous coding harness**
+# 可爪子化的编码工具路线图
+
+## 目标
+
+将 ai-code 转变为最**可爪子化**的编码工具：
+
+- 无人类优先的终端假设
+- 无脆弱的提示注入时机
+- 无不透明的会话状态
+- 无隐藏的插件或 MCP 失败
+- 无需人工照看常规恢复
+
+此路线图假设主要用户是**通过钩子、插件、会话和频道事件连接的爪子**。
+
+## "可爪子化"的定义
+
+可爪子化的工具是：
+
+- 启动时确定性
+- 状态和失败模式机器可读
+- 无需人类监视终端即可恢复
+- 分支/测试/工作树感知
+- 插件/MCP 生命周期感知
+- 事件优先，而非日志优先
+- 能够自主执行下一步
+
+## 当前痛点
+
+### 1. 会话启动脆弱
+
+- 信任提示可能阻塞 TUI 启动
+- 提示可能进入 shell 而不是编码代理
+- "会话存在"并不意味着"会话就绪"
+
+### 2. 真相分散在各层
+
+- tmux 状态
+- clawhip 事件流
+- git/工作树状态
+- 测试状态
+- 网关/插件/MCP 运行时状态
+
+### 3. 事件过于日志化
+
+- 爪子目前从嘈杂的文本中推断过多
+- 重要状态未规范化为机器可读事件
+
+### 4. 恢复循环过于手动
+
+- 重启工作器
+- 接受信任提示
+- 重新注入提示
+- 检测过时分支
+- 重试失败的启动
+- 手动分类基础架构 vs 代码失败
+
+### 5. 分支新鲜度执行不足
+
+- 侧分支可能错过已落地的 main 修复
+- 广泛的测试失败可能是过时分支的噪音，而不是真正的回归
+
+### 6. 插件/MCP 失败分类不足
+
+- 启动失败、握手失败、配置错误、部分启动和降级模式未充分暴露
+
+### 7. 人类 UX 仍泄漏到爪子工作流
+
+- 过多依赖终端/TUI 行为，而不是明确的代理状态转换和控制 API
+
+## 产品原则
+
+1. **状态机优先** — 每个工作器都有明确的生命周期状态。
+2. **事件优先于抓取的散文** — 频道输出应从类型化事件派生。
+3. **恢复优先于升级** — 已知失败模式应在寻求帮助前自动修复一次。
+4. **分支新鲜度优先于责备** — 在将红色测试视为新回归之前，检测过时分支。
+5. **部分成功是一等公民** — 例如，MCP 启动可能对某些服务器成功而对其他服务器失败，具有结构化的降级模式报告。
+6. **终端是传输，不是真相** — tmux/TUI 可能仍然是实现细节，但编排状态必须位于它们之上。
+7. **策略是可执行的** — 合并、重试、变基、过时清理和升级规则应机器强制执行。
+
+## 路线图
+
+## 阶段 1 — 可靠的工作器启动
+
+### 1. 编码工作器的就绪握手生命周期
+
+添加明确状态：
+
+- `spawning`（生成中）
+- `trust_required`（需要信任）
+- `ready_for_prompt`（准备好提示）
+- `prompt_accepted`（提示已接受）
+- `running`（运行中）
+- `blocked`（阻塞）
+- `finished`（已完成）
+- `failed`（失败）
+
+验收：
+
+- 提示永远不会在 `ready_for_prompt` 之前发送
+- 信任提示状态可检测并被发出
+- shell 误传递成为可检测的一等失败状态
+
+### 2. 信任提示解析器
+
+为已知仓库/工作树添加允许列表自动信任行为。
+
+验收：
+
+- 受信任的仓库自动清除信任提示
+- 为 `trust_required` 和 `trust_resolved` 发出事件
+- 非允许列表的仓库保持门控
+
+### 3. 结构化会话控制 API
+
+在 tmux 之上提供机器控制：
+
+- 创建工作器
+- 等待就绪
+- 发送任务
+- 获取状态
+- 获取最后错误
+- 重启工作器
+- 终止工作器
+
+验收：
+
+- 爪子可以操作编码工作器，而不需要原始的 send-keys 作为主要控制平面
+
+## 阶段 2 — 事件原生 Clawhip 集成
+
+### 4. 规范通道事件架构
+
+定义类型化事件，例如：
+
+- `lane.started`（通道已开始）
+- `lane.ready`（通道已就绪）
+- `lane.prompt_misdelivery`（通道提示误传递）
+- `lane.blocked`（通道已阻塞）
+- `lane.red`（通道红色）
+- `lane.green`（通道绿色）
+- `lane.commit.created`（通道提交已创建）
+- `lane.pr.opened`（通道 PR 已打开）
+- `lane.merge.ready`（通道合并已就绪）
+- `lane.finished`（通道已完成）
+- `lane.failed`（通道已失败）
+- `branch.stale_against_main`（分支相对于 main 过时）
+
+验收：
+
+- clawhip 消费类型化通道事件
+- Discord 摘要从结构化事件渲染，而不仅仅是面板抓取
+
+### 5. 失败分类法
+
+规范化失败类别：
+
+- `prompt_delivery`（提示传递）
+- `trust_gate`（信任门）
+- `branch_divergence`（分支分歧）
+- `compile`（编译）
+- `test`（测试）
+- `plugin_startup`（插件启动）
+- `mcp_startup`（MCP 启动）
+- `mcp_handshake`（MCP 握手）
+- `gateway_routing`（网关路由）
+- `tool_runtime`（工具运行时）
+- `infra`（基础设施）
+
+验收：
+
+- 阻塞被机器分类
+- 仪表板和重试策略可以根据失败类型分支
+
+### 6. 可操作的摘要压缩
+
+将嘈杂的事件流压缩为：
+
+- 当前阶段
+- 最后成功的检查点
+- 当前阻塞
+- 建议的下一个恢复操作
+
+验收：
+
+- 频道状态更新保持简短且机器基础
+- 爪子停止从原始构建垃圾中推断状态
+
+## 阶段 3 — 分支/测试感知和自动恢复
+
+### 7. 广泛验证前的过时分支检测
+
+在广泛测试运行之前，将当前分支与 `main` 进行比较，检测是否缺少已知修复。
+
+验收：
+
+- 发出 `branch.stale_against_main`
+- 根据策略建议或自动运行变基/向前合并
+- 避免将过时分支失败误分类为新回归
+
+### 8. 常见失败的恢复方案
+
+为以下情况编码已知的自动恢复：
+
+- 信任提示未解决
+- 提示传递到 shell
+- 过时分支
+- 跨 crate 重构后的编译红色
+- MCP 启动握手失败
+- 部分插件启动
+
+验收：
+
+- 在升级前发生一次自动恢复尝试
+- 尝试的恢复本身作为结构化事件数据发出
+
+### 9. 绿色度契约
+
+工作器应区分：
+
+- 目标测试绿色
+- 包绿色
+- 工作区绿色
+- 合并就绪绿色
+
+验收：
+
+- 不再有模糊的"测试通过"消息
+- 合并策略可以要求通道类型的正确绿色级别
+
+## 阶段 4 — 爪子优先任务执行
+
+### 10. 类型化任务包格式
+
+定义具有以下字段的结构化任务包：
+
+- 目标
+- 范围
+- 仓库/工作树
+- 分支策略
+- 验收测试
+- 提交策略
+- 报告契约
+- 升级策略
+
+验收：
+
+- 爪子可以调度工作，而不仅仅依赖于长自然语言提示 blob
+- 任务包可以安全地记录、重试和转换
+
+### 11. 自主编码的策略引擎
+
+编码自动化规则，例如：
+
+- 如果绿色 + 范围差异 + 审查通过 → 合并到 dev
+- 如果过时分支 → 在广泛测试前向前合并
+- 如果启动阻塞 → 恢复一次，然后升级
+- 如果通道完成 → 发出结束和清理会话
+
+验收：
+
+- doctrine 从聊天指令移动到可执行规则
+
+### 12. 爪子原生仪表板 / 通道板
+
+暴露机器可读板：
+
+- 仓库
+- 活跃爪子
+- 工作树
+- 分支新鲜度
+- 红色/绿色状态
+- 当前阻塞
+- 合并就绪
+- 最后有意义的事件
+
+验收：
+
+- 爪子可以直接查询状态
+- 人类面向的视图成为渲染层，而不是真相来源
+
+## 阶段 5 — 插件和 MCP 生命周期成熟度
+
+### 13. 一等插件/MCP 生命周期契约
+
+每个插件/MCP 集成应暴露：
+
+- 配置验证契约
+- 启动健康检查
+- 发现结果
+- 降级模式行为
+- 关闭/清理契约
+
+验收：
+
+- 部分启动和每服务器失败被结构化报告
+- 即使一个服务器失败，成功的服务器仍然可用
+
+### 14. MCP 端到端生命周期一致性
+
+关闭以下差距：
+
+- 配置加载
+- 服务器注册
+- 生成/连接
+- 初始化握手
+- 工具/资源发现
+- 调用路径
+- 错误暴露
+- 关闭/清理
+
+验收：
+
+- 一致性测试工具和运行时测试覆盖健康和降级启动案例
+- 损坏的服务器作为结构化失败暴露，而不是不透明的警告
+
+## 立即待办事项（来自当前实际痛点）
+
+优先级顺序：P0 = 阻塞 CI/绿色状态，P1 = 阻塞集成接线，P2 = 可爪子化硬化，P3 = 群体效率改进。
+
+**P0 — 优先修复（CI 可靠性）**
+
+1. 将 `render_diff_report` 测试隔离到 tmpdir — 在 `cargo test --workspace` 下不稳定；读取真实工作树状态；在活动工作树操作期间破坏 CI
+2. 将 GitHub CI 从单 crate 覆盖扩展到工作区级验证 — 当前 `rust-ci.yml` 运行 `cargo fmt` 和 `cargo test -p rusty-claude-cli`，但错过已在本地通过的更广泛的 `cargo test --workspace` 覆盖
+3. 添加发布级二进制工作流 — 仓库有 Rust CLI 和发布意图，但没有在发布步骤前构建标记工件/检查发布打包的 GitHub Actions 路径
+4. 添加容器优先测试/运行文档 — 运行时检测 Docker/Podman/容器状态，但文档未显示 `cargo test --workspace`、二进制执行或绑定挂载仓库使用的规范容器工作流
+5. 在入职文档和帮助中展示 `doctor` / 预检诊断 — CLI 已经有设置诊断命令和分支预检机制，但它们在 README/USAGE 中不够突出，因此新用户仍然会询问手动设置问题，而不是先运行内置健康检查
+6. 为文档添加品牌/真相来源残留检查 — 仓库迁移后，旧组织名称可能在徽章、星历史 URL 和复制的代码片段中存活；文档需要一致性检查或 CI  lint 来自动捕获过时的品牌
+7. 使 README 产品叙述与当前仓库现实一致 — 顶级文档现在说活跃工作区是 Rust，但后面的部分仍然将仓库描述为 Python 优先；用户不应必须推断哪个实现是规范的
+8. 消除首次运行帮助/构建路径的警告垃圾 — `cargo run -p rusty-claude-cli -- --help` 当前在实际帮助文本之前打印一墙编译警告，这会污染首次接触 UX 并将产品表面隐藏在无关噪音后面
+9. 将 `doctor` 从仅斜杠命令提升为顶级 CLI 入口点 — 用户自然尝试 `claw doctor`，但今天它会错误并告诉他们首先进入 REPL 或恢复路径；健康检查流程应该可以直接从 shell 调用
+10. 使机器可读状态命令真正机器可读 — `status` 和 `sandbox` 接受全局 `--output-format json` 标志路径，但当前仍然渲染散文表，这会破坏 shell 自动化和代理友好的健康轮询
+11. 在用户面向输出中统一遗留配置/技能命名空间 — `skills` 当前显示混合项目根目录，如 `.codex` 和 `.claude`，这会将历史层泄漏到当前产品中，并使不清楚哪个配置命名空间是规范的
+12. 尊重 `skills` 和 `mcp` 等清单命令的 JSON 输出 — 这些正是代理和 shell 脚本希望以编程方式检查的命令，但 `--output-format json` 仍然产生散文，在应该存在结构化清单的地方强制文本抓取
+13. 审计整个 CLI 表面的 `--output-format` 契约 — 当前行为因子命令而异，因此代理无法在不逐命令探测的情况下信任全局标志；格式契约本身需要变得确定性
+
+**P1 — 下一步（集成接线，解除验证阻塞）**
+2\. 添加跨模块集成测试 — **已完成**：12 个集成测试覆盖工作器→恢复→策略、过时分支→策略、绿色契约→策略、协调流程
+3\. 接线通道完成发射器 — **已完成**：`lane_completion` 模块，`detect_lane_completion()` 自动从会话完成 + 测试绿色 + 推送完成设置 `LaneContext::completed` → 策略结束
+4\. 将 `SummaryCompressor` 接线到通道事件管道 — **已完成**：`compress_summary_text()` 馈入 `tools/src/lib.rs` 中的 `LaneEvent::Finished` 详细信息字段
+
+**P2 — 可爪子化硬化（原始待办事项）**
+5\. 工作器就绪握手 + 信任解析 — **已完成**：`WorkerStatus` 状态机，具有 `Spawning` → `TrustRequired` → `ReadyForPrompt` → `PromptAccepted` → `Running` 生命周期，`trust_auto_resolve` + `trust_gate_cleared` 门控
+6\. 提示误传递检测和恢复 — **已完成**：`prompt_delivery_attempts` 计数器，`PromptMisdelivery` 事件检测，`auto_recover_prompt_misdelivery` + `replay_prompt` 恢复臂
+7\. Clawhip 中的规范通道事件架构 — **已完成**：`LaneEvent` 枚举，具有 `Started/Blocked/Failed/Finished` 变体，`LaneEvent::new()` 类型化构造函数，`tools/src/lib.rs` 集成
+8\. 失败分类法 + 阻塞规范化 — **已完成**：`WorkerFailureKind` 枚举（`TrustGate/PromptDelivery/Protocol/Provider`），`FailureScenario::from_worker_failure_kind()` 桥接到恢复方案
+9\. 工作区测试前的过时分支检测 — **已完成**：`stale_branch.rs` 模块，具有新鲜度检测、落后/领先指标、策略集成
+10\. MCP 结构化降级启动报告 — **已完成**：`McpManager` 降级启动报告（`mcp_stdio.rs` 中 +183 行），失败服务器分类（启动/握手/配置/部分），工具输出中的结构化 `failed_servers` + `recovery_recommendations`
+11\. 结构化任务包格式 — **已完成**：`task_packet.rs` 模块，具有 `TaskPacket` 结构、验证、序列化、`TaskScope` 解析（工作区/模块/单个文件/自定义），集成到 `tools/src/lib.rs`
+12\. 通道板 / 机器可读状态 API — **已完成**：通道完成硬化 + `LaneContext::completed` 自动检测 + MCP 降级报告表面机器可读状态
+13\. **会话完成失败分类** — **已完成**：`WorkerFailureKind::Provider` + `observe_completion()` + 恢复方案桥接已落地
+14\. **配置合并验证差距** — **已完成**：`config.rs` 钩子验证在深度合并前（+56 行），格式错误的条目失败并带有源路径上下文，而不是合并解析错误
+15\. **MCP 管理器发现不稳定测试** — `manager_discovery_report_keeps_healthy_servers_when_one_server_fails` 在 CI 中有间歇性计时问题；暂时忽略，需要根本原因修复
+
+**P3 — 群体效率**
+13\. 群体分支锁定协议 — 在并行工作器漂移到重复实现之前，检测同一模块/同一分支冲突
+14\. 提交来源 / 工作树感知推送事件 — 发出分支、工作树、被取代者和规范提交谱系，以便并行会话停止产生看起来重复的推送摘要
+
+## 建议的会话拆分
+
+### 会话 A — 工作器启动协议
+
+重点：
+
+- 信任提示检测
+- 就绪-提示握手
+- 提示误传递检测
+
+### 会话 B — clawhip 通道事件
+
+重点：
+
+- 规范通道事件架构
+- 失败分类法
+- 摘要压缩
+
+### 会话 C — 分支/测试智能
+
+重点：
+
+- 过时分支检测
+- 绿色级别契约
+- 恢复方案
+
+### 会话 D — MCP 生命周期硬化
+
+重点：
+
+- 启动/握手可靠性
+- 结构化失败服务器报告
+- 降级模式运行时行为
+- 生命周期测试/测试工具覆盖
+
+### 会话 E — 类型化任务包 + 策略引擎
+
+重点：
+
+- 结构化任务格式
+- 重试/合并/升级规则
+- 自主通道关闭行为
+
+## MVP 成功标准
+
+我们应该认为 claw-code 更加可爪子化当：
+
+- 爪子可以启动工作器并确定地知道它何时就绪
+- 爪子不再意外地将任务输入到 shell 中
+- 过时分支失败在浪费调试时间之前被识别
+- clawhip 报告机器状态，而不仅仅是 tmux 散文
+- MCP/插件启动失败被分类并清晰地暴露
+- 编码通道可以从常见的启动和分支问题中自我恢复，无需人工照看
+
+## 简短版本
+
+AI-code 应该从：
+
+- 人类也可以驱动的 CLI
+
+演变为：
+
+- **爪子原生执行运行时**
+- **事件原生编排 substrate**
+- **插件/钩子优先的自主编码工具**
+
