@@ -79,17 +79,86 @@ This repository now focuses on Python porting work instead.
 .
 ├── src/                                # Python porting workspace
 │   ├── __init__.py
-│   ├── commands.py
-│   ├── main.py
-│   ├── models.py
-│   ├── port_manifest.py
-│   ├── query_engine.py
-│   ├── task.py
-│   └── tools.py
+│   ├── assistant/                       # Assistant subsystem
+│   ├── bootstrap/                       # Bootstrap subsystem
+│   ├── bridge/                          # Bridge subsystem
+│   ├── buddy/                           # Buddy subsystem
+│   ├── cli/                             # CLI subsystem
+│   ├── components/                      # Components subsystem
+│   ├── constants/                       # Constants subsystem
+│   ├── coordinator/                     # Coordinator subsystem
+│   ├── entrypoints/                     # Entrypoints subsystem
+│   ├── hooks/                           # Hooks subsystem
+│   ├── keybindings/                     # Keybindings subsystem
+│   ├── memdir/                          # Memdir subsystem
+│   ├── migrations/                      # Migrations subsystem
+│   ├── moreright/                       # Moreright subsystem
+│   ├── native_ts/                       # Native TS subsystem
+│   ├── outputStyles/                    # Output styles subsystem
+│   ├── plugins/                         # Plugins subsystem
+│   ├── reference_data/                  # Reference data
+│   ├── remote/                          # Remote subsystem
+│   ├── schemas/                         # Schemas subsystem
+│   ├── screens/                         # Screens subsystem
+│   ├── server/                          # Server subsystem
+│   ├── services/                        # Services subsystem
+│   ├── skills/                          # Skills subsystem
+│   ├── state/                           # State subsystem
+│   ├── types/                           # Types subsystem
+│   ├── upstreamproxy/                   # Upstream proxy subsystem
+│   ├── utils/                           # Utils subsystem
+│   ├── vim/                             # Vim subsystem
+│   ├── voice/                           # Voice subsystem
+│   ├── QueryEngine.py                   # Query engine
+│   ├── Tool.py                          # Tool definition
+│   ├── bootstrap_graph.py               # Bootstrap graph
+│   ├── command_graph.py                 # Command graph
+│   ├── commands.py                      # Commands
+│   ├── context.py                       # Context
+│   ├── costHook.py                      # Cost hook
+│   ├── cost_tracker.py                  # Cost tracker
+│   ├── deferred_init.py                 # Deferred initialization
+│   ├── dialogLaunchers.py               # Dialog launchers
+│   ├── direct_modes.py                  # Direct modes
+│   ├── execution_registry.py            # Execution registry
+│   ├── history.py                       # History
+│   ├── ink.py                           # Ink
+│   ├── interactiveHelpers.py            # Interactive helpers
+│   ├── main.py                          # Main entrypoint
+│   ├── models.py                        # Models
+│   ├── parity_audit.py                  # Parity audit
+│   ├── permissions.py                   # Permissions
+│   ├── port_manifest.py                 # Port manifest
+│   ├── prefetch.py                      # Prefetch
+│   ├── projectOnboardingState.py        # Project onboarding state
+│   ├── query.py                         # Query
+│   ├── query_engine.py                  # Query engine
+│   ├── remote_runtime.py                # Remote runtime
+│   ├── replLauncher.py                  # REPL launcher
+│   ├── runtime.py                       # Runtime
+│   ├── session_store.py                 # Session store
+│   ├── setup.py                         # Setup
+│   ├── system_init.py                   # System initialization
+│   ├── task.py                          # Task
+│   ├── tasks.py                         # Tasks
+│   ├── tool_pool.py                     # Tool pool
+│   ├── tools.py                         # Tools
+│   └── transcript.py                    # Transcript
 ├── tests/                              # Python verification
-├── assets/omx/                         # OmX workflow screenshots
+├── rust/                                # Rust implementation
+│   ├── crates/                          # Rust crates
+│   ├── scripts/                         # Rust scripts
+│   └── README.md                        # Rust README
+├── assets/                              # Assets
+│   ├── omx/                             # OmX workflow screenshots
+│   └── clawd-hero.jpeg                  # Hero image
 ├── 2026-03-09-is-legal-the-same-as-legitimate-ai-reimplementation-and-the-erosion-of-copyleft.md
-└── README.md
+├── CLAUDE.md                            # CLAUDE.md
+├── PARITY.md                            # Parity documentation
+├── PHILOSOPHY.md                        # Philosophy
+├── README.md                            # This README
+├── ROADMAP.md                           # Roadmap
+└── USAGE.md                             # Usage guide
 ```
 
 ## Python Workspace Overview
