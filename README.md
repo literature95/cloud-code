@@ -1,7 +1,7 @@
-# Rewriting Project Claw Code
+# 重写 Project Claw Code
 
 <p align="center">
-  <strong>⭐ The fastest repo in history to surpass 50K stars, reaching the milestone in just 2 hours after publication ⭐</strong>
+  <strong>⭐ 历史上最快突破 50K 星标的仓库，发布后仅 2 小时就达到了这一里程碑 ⭐</strong>
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <strong>Autonomously maintained by lobsters/claws — not by human hands</strong>
+  <strong>由 lobsters/claws 自主维护 — 非人工维护</strong>
 </p>
 
 <p align="center">
@@ -31,25 +31,25 @@
 </p>
 
 > [!IMPORTANT]
-> The active Rust workspace now lives in [`rust/`](./rust). Start with [`USAGE.md`](./USAGE.md) for build, auth, CLI, session, and parity-harness workflows, then use [`rust/README.md`](./rust/README.md) for crate-level details.
+> 活跃的 Rust 工作区现在位于 [`rust/`](./rust) 目录。请先查看 [`USAGE.md`](./USAGE.md) 了解构建、认证、CLI、会话和奇偶性测试工作流，然后查看 [`rust/README.md`](./rust/README.md) 获取 crate 级别的详细信息。
 
-> Want the bigger idea behind this repo? Read [`PHILOSOPHY.md`](./PHILOSOPHY.md) and Sigrid Jin's public explanation: https://x.com/realsigridjin/status/2039472968624185713
+> 想了解这个仓库背后的更大理念？请阅读 [`PHILOSOPHY.md`](./PHILOSOPHY.md) 和 Sigrid Jin 的公开解释：https://x.com/realsigridjin/status/2039472968624185713
 
-> Shout-out to the UltraWorkers ecosystem powering this repo: [clawhip](https://github.com/Yeachan-Heo/clawhip), [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent), [oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode), [oh-my-codex](https://github.com/Yeachan-Heo/oh-my-codex), and the [UltraWorkers Discord](https://discord.gg/6ztZB9jvWq).
+> 鸣谢为这个仓库提供支持的 UltraWorkers 生态系统：[clawhip](https://github.com/Yeachan-Heo/clawhip)、[oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)、[oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode)、[oh-my-codex](https://github.com/Yeachan-Heo/oh-my-codex) 和 [UltraWorkers Discord](https://discord.gg/6ztZB9jvWq)。
 
 ---
 
-## Backstory
+## 项目背景
 
-This repo is maintained by **lobsters/claws**, not by a conventional human-only dev team.
+这个仓库由 **lobsters/claws** 维护，而不是由传统的纯人工开发团队维护。
 
-The people behind the system are [Bellman / Yeachan Heo](https://github.com/Yeachan-Heo) and friends like [Yeongyu](https://github.com/code-yeongyu), but the repo itself is being pushed forward by autonomous claw workflows: parallel coding sessions, event-driven orchestration, recovery loops, and machine-readable lane state.
+系统背后的人员包括 [Bellman / Yeachan Heo](https://github.com/Yeachan-Heo) 和像 [Yeongyu](https://github.com/code-yeongyu) 这样的朋友，但仓库本身是由自主的 claw 工作流推动的：并行编码会话、事件驱动的编排、恢复循环和机器可读的通道状态。
 
-In practice, that means this project is not just *about* coding agents — it is being **actively built by them**. Features, tests, telemetry, docs, and workflow hardening are landed through claw-driven loops using [clawhip](https://github.com/Yeachan-Heo/clawhip), [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent), [oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode), and [oh-my-codex](https://github.com/Yeachan-Heo/oh-my-codex).
+实际上，这意味着这个项目不仅仅是 *关于* 编码代理 — 它正在 **由它们积极构建**。功能、测试、遥测、文档和工作流加固都是通过 claw 驱动的循环实现的，使用 [clawhip](https://github.com/Yeachan-Heo/clawhip)、[oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)、[oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode) 和 [oh-my-codex](https://github.com/Yeachan-Heo/oh-my-codex)。
 
-This repository exists to prove that an open coding harness can be built **autonomously, in public, and at high velocity** — with humans setting direction and claws doing the grinding.
+这个仓库的存在是为了证明一个开放的编码框架可以 **自主、公开、高速** 地构建 — 由人类设定方向，由 claws 完成具体工作。
 
-See the public build story here:
+查看公开的构建故事：
 
 https://x.com/realsigridjin/status/2039472968624185713
 
@@ -57,198 +57,198 @@ https://x.com/realsigridjin/status/2039472968624185713
 
 ---
 
-## Porting Status
+## 移植状态
 
-The main source tree is now Python-first.
+主要源代码树现在以 Python 为主。
 
-- `src/` contains the active Python porting workspace
-- `tests/` verifies the current Python workspace
-- the exposed snapshot is no longer part of the tracked repository state
+- `src/` 包含活跃的 Python 移植工作区
+- `tests/` 验证当前的 Python 工作区
+- 公开的快照不再是跟踪的仓库状态的一部分
 
-The current Python workspace is not yet a complete one-to-one replacement for the original system, but the primary implementation surface is now Python.
+当前的 Python 工作区还不是原始系统的完整一对一替代品，但主要的实现表面现在是 Python。
 
-## Why this rewrite exists
+## 为什么进行这次重写
 
-I originally studied the exposed codebase to understand its harness, tool wiring, and agent workflow. After spending more time with the legal and ethical questions—and after reading the essay linked below—I did not want the exposed snapshot itself to remain the main tracked source tree.
+我最初研究公开的代码库是为了了解它的框架、工具连接和代理工作流。在花更多时间研究法律和道德问题后 — 以及阅读下面链接的文章后 — 我不希望公开的快照本身仍然是主要的跟踪源代码树。
 
-This repository now focuses on Python porting work instead.
+现在这个仓库专注于 Python 移植工作。
 
-## Repository Layout
+## 仓库结构
 
 ```text
 .
-├── src/                                # Python porting workspace
+├── src/                                # Python 移植工作区
 │   ├── __init__.py
-│   ├── assistant/                       # Assistant subsystem
-│   ├── bootstrap/                       # Bootstrap subsystem
-│   ├── bridge/                          # Bridge subsystem
-│   ├── buddy/                           # Buddy subsystem
-│   ├── cli/                             # CLI subsystem
-│   ├── components/                      # Components subsystem
-│   ├── constants/                       # Constants subsystem
-│   ├── coordinator/                     # Coordinator subsystem
-│   ├── entrypoints/                     # Entrypoints subsystem
-│   ├── hooks/                           # Hooks subsystem
-│   ├── keybindings/                     # Keybindings subsystem
-│   ├── memdir/                          # Memdir subsystem
-│   ├── migrations/                      # Migrations subsystem
-│   ├── moreright/                       # Moreright subsystem
-│   ├── native_ts/                       # Native TS subsystem
-│   ├── outputStyles/                    # Output styles subsystem
-│   ├── plugins/                         # Plugins subsystem
-│   ├── reference_data/                  # Reference data
-│   ├── remote/                          # Remote subsystem
-│   ├── schemas/                         # Schemas subsystem
-│   ├── screens/                         # Screens subsystem
-│   ├── server/                          # Server subsystem
-│   ├── services/                        # Services subsystem
-│   ├── skills/                          # Skills subsystem
-│   ├── state/                           # State subsystem
-│   ├── types/                           # Types subsystem
-│   ├── upstreamproxy/                   # Upstream proxy subsystem
-│   ├── utils/                           # Utils subsystem
-│   ├── vim/                             # Vim subsystem
-│   ├── voice/                           # Voice subsystem
-│   ├── QueryEngine.py                   # Query engine
-│   ├── Tool.py                          # Tool definition
-│   ├── bootstrap_graph.py               # Bootstrap graph
-│   ├── command_graph.py                 # Command graph
-│   ├── commands.py                      # Commands
-│   ├── context.py                       # Context
-│   ├── costHook.py                      # Cost hook
-│   ├── cost_tracker.py                  # Cost tracker
-│   ├── deferred_init.py                 # Deferred initialization
-│   ├── dialogLaunchers.py               # Dialog launchers
-│   ├── direct_modes.py                  # Direct modes
-│   ├── execution_registry.py            # Execution registry
-│   ├── history.py                       # History
+│   ├── assistant/                       # 助手子系统
+│   ├── bootstrap/                       # 引导子系统
+│   ├── bridge/                          # 桥接子系统
+│   ├── buddy/                           # 伙伴子系统
+│   ├── cli/                             # CLI 子系统
+│   ├── components/                      # 组件子系统
+│   ├── constants/                       # 常量子系统
+│   ├── coordinator/                     # 协调器子系统
+│   ├── entrypoints/                     # 入口点子系统
+│   ├── hooks/                           # 钩子子系统
+│   ├── keybindings/                     # 键绑定子系统
+│   ├── memdir/                          # 内存目录子系统
+│   ├── migrations/                      # 迁移子系统
+│   ├── moreright/                       # Moreright 子系统
+│   ├── native_ts/                       # 原生 TS 子系统
+│   ├── outputStyles/                    # 输出样式子系统
+│   ├── plugins/                         # 插件子系统
+│   ├── reference_data/                  # 参考数据
+│   ├── remote/                          # 远程子系统
+│   ├── schemas/                         # 模式子系统
+│   ├── screens/                         # 屏幕子系统
+│   ├── server/                          # 服务器子系统
+│   ├── services/                        # 服务子系统
+│   ├── skills/                          # 技能子系统
+│   ├── state/                           # 状态子系统
+│   ├── types/                           # 类型子系统
+│   ├── upstreamproxy/                   # 上游代理子系统
+│   ├── utils/                           # 工具子系统
+│   ├── vim/                             # Vim 子系统
+│   ├── voice/                           # 语音子系统
+│   ├── QueryEngine.py                   # 查询引擎
+│   ├── Tool.py                          # 工具定义
+│   ├── bootstrap_graph.py               # 引导图
+│   ├── command_graph.py                 # 命令图
+│   ├── commands.py                      # 命令
+│   ├── context.py                       # 上下文
+│   ├── costHook.py                      # 成本钩子
+│   ├── cost_tracker.py                  # 成本跟踪器
+│   ├── deferred_init.py                 # 延迟初始化
+│   ├── dialogLaunchers.py               # 对话启动器
+│   ├── direct_modes.py                  # 直接模式
+│   ├── execution_registry.py            # 执行注册表
+│   ├── history.py                       # 历史记录
 │   ├── ink.py                           # Ink
-│   ├── interactiveHelpers.py            # Interactive helpers
-│   ├── main.py                          # Main entrypoint
-│   ├── models.py                        # Models
-│   ├── parity_audit.py                  # Parity audit
-│   ├── permissions.py                   # Permissions
-│   ├── port_manifest.py                 # Port manifest
-│   ├── prefetch.py                      # Prefetch
-│   ├── projectOnboardingState.py        # Project onboarding state
-│   ├── query.py                         # Query
-│   ├── query_engine.py                  # Query engine
-│   ├── remote_runtime.py                # Remote runtime
-│   ├── replLauncher.py                  # REPL launcher
-│   ├── runtime.py                       # Runtime
-│   ├── session_store.py                 # Session store
-│   ├── setup.py                         # Setup
-│   ├── system_init.py                   # System initialization
-│   ├── task.py                          # Task
-│   ├── tasks.py                         # Tasks
-│   ├── tool_pool.py                     # Tool pool
-│   ├── tools.py                         # Tools
-│   └── transcript.py                    # Transcript
-├── tests/                              # Python verification
-├── rust/                                # Rust implementation
+│   ├── interactiveHelpers.py            # 交互助手
+│   ├── main.py                          # 主入口点
+│   ├── models.py                        # 模型
+│   ├── parity_audit.py                  # 奇偶性审计
+│   ├── permissions.py                   # 权限
+│   ├── port_manifest.py                 # 移植清单
+│   ├── prefetch.py                      # 预取
+│   ├── projectOnboardingState.py        # 项目入职状态
+│   ├── query.py                         # 查询
+│   ├── query_engine.py                  # 查询引擎
+│   ├── remote_runtime.py                # 远程运行时
+│   ├── replLauncher.py                  # REPL 启动器
+│   ├── runtime.py                       # 运行时
+│   ├── session_store.py                 # 会话存储
+│   ├── setup.py                         # 设置
+│   ├── system_init.py                   # 系统初始化
+│   ├── task.py                          # 任务
+│   ├── tasks.py                         # 任务
+│   ├── tool_pool.py                     # 工具池
+│   ├── tools.py                         # 工具
+│   └── transcript.py                    # 转录
+├── tests/                              # Python 验证
+├── rust/                                # Rust 实现
 │   ├── crates/                          # Rust crates
-│   ├── scripts/                         # Rust scripts
+│   ├── scripts/                         # Rust 脚本
 │   └── README.md                        # Rust README
-├── assets/                              # Assets
-│   ├── omx/                             # OmX workflow screenshots
-│   └── clawd-hero.jpeg                  # Hero image
+├── assets/                              # 资产
+│   ├── omx/                             # OmX 工作流截图
+│   └── clawd-hero.jpeg                  # 英雄图像
 ├── 2026-03-09-is-legal-the-same-as-legitimate-ai-reimplementation-and-the-erosion-of-copyleft.md
 ├── CLAUDE.md                            # CLAUDE.md
-├── PARITY.md                            # Parity documentation
-├── PHILOSOPHY.md                        # Philosophy
-├── README.md                            # This README
-├── ROADMAP.md                           # Roadmap
-└── USAGE.md                             # Usage guide
+├── PARITY.md                            # 奇偶性文档
+├── PHILOSOPHY.md                        # 理念
+├── README.md                            # 本 README
+├── ROADMAP.md                           # 路线图
+└── USAGE.md                             # 使用指南
 ```
 
-## Python Workspace Overview
+## Python 工作区概览
 
-The new Python `src/` tree currently provides:
+新的 Python `src/` 树目前提供：
 
-- **`port_manifest.py`** — summarizes the current Python workspace structure
-- **`models.py`** — dataclasses for subsystems, modules, and backlog state
-- **`commands.py`** — Python-side command port metadata
-- **`tools.py`** — Python-side tool port metadata
-- **`query_engine.py`** — renders a Python porting summary from the active workspace
-- **`main.py`** — a CLI entrypoint for manifest and summary output
+- **`port_manifest.py`** — 总结当前 Python 工作区结构
+- **`models.py`** — 子系统、模块和积压状态的数据类
+- **`commands.py`** — Python 端命令移植元数据
+- **`tools.py`** — Python 端工具移植元数据
+- **`query_engine.py`** — 从活跃工作区渲染 Python 移植摘要
+- **`main.py`** — 清单和摘要输出的 CLI 入口点
 
-## Quickstart
+## 快速开始
 
-Render the Python porting summary:
+渲染 Python 移植摘要：
 
 ```bash
 python3 -m src.main summary
 ```
 
-Print the current Python workspace manifest:
+打印当前 Python 工作区清单：
 
 ```bash
 python3 -m src.main manifest
 ```
 
-List the current Python modules:
+列出当前 Python 模块：
 
 ```bash
 python3 -m src.main subsystems --limit 16
 ```
 
-Run verification:
+运行验证：
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-Run the parity audit against the local ignored archive (when present):
+针对本地忽略的归档运行奇偶性审计（当存在时）：
 
 ```bash
 python3 -m src.main parity-audit
 ```
 
-Inspect mirrored command/tool inventories:
+检查镜像的命令/工具清单：
 
 ```bash
 python3 -m src.main commands --limit 10
 python3 -m src.main tools --limit 10
 ```
 
-## Current Parity Checkpoint
+## 当前奇偶性检查点
 
-The port now mirrors the archived root-entry file surface, top-level subsystem names, and command/tool inventories much more closely than before. However, it is **not yet** a full runtime-equivalent replacement for the original TypeScript system; the Python tree still contains fewer executable runtime slices than the archived source.
+移植现在更紧密地镜像了归档的根条目文件表面、顶级子系统名称和命令/工具清单。然而，它 **尚未** 成为原始 TypeScript 系统的完整运行时等效替代品；Python 树仍然包含比归档源更少的可执行运行时切片。
 
 
-## Built with `oh-my-codex`
+## 使用 `oh-my-codex` 构建
 
-The restructuring and documentation work on this repository was AI-assisted and orchestrated with Yeachan Heo's [oh-my-codex (OmX)](https://github.com/Yeachan-Heo/oh-my-codex), layered on top of Codex.
+这个仓库的重组和文档工作是由 Yeachan Heo 的 [oh-my-codex (OmX)](https://github.com/Yeachan-Heo/oh-my-codex) 在 Codex 之上编排的 AI 辅助工作。
 
-- **`$team` mode:** used for coordinated parallel review and architectural feedback
-- **`$ralph` mode:** used for persistent execution, verification, and completion discipline
-- **Codex-driven workflow:** used to turn the main `src/` tree into a Python-first porting workspace
+- **`$team` 模式：** 用于协调并行审查和架构反馈
+- **`$ralph` 模式：** 用于持久执行、验证和完成纪律
+- **Codex 驱动的工作流：** 用于将主要 `src/` 树转变为 Python 优先的移植工作区
 
-### OmX workflow screenshots
+### OmX 工作流截图
 
 ![OmX workflow screenshot 1](assets/omx/omx-readme-review-1.png)
 
-*Ralph/team orchestration view while the README and essay context were being reviewed in terminal panes.*
+*在终端窗格中审查 README 和文章上下文时的 Ralph/团队编排视图。*
 
 ![OmX workflow screenshot 2](assets/omx/omx-readme-review-2.png)
 
-*Split-pane review and verification flow during the final README wording pass.*
+*在最终 README 措辞过程中的分窗格审查和验证流程。*
 
-## Community
+## 社区
 
 <p align="center">
   <a href="https://discord.gg/6ztZB9jvWq"><img src="https://img.shields.io/badge/UltraWorkers-Discord-5865F2?logo=discord&style=for-the-badge" alt="UltraWorkers Discord" /></a>
 </p>
 
-Join the [**UltraWorkers Discord**](https://discord.gg/6ztZB9jvWq) — the community around clawhip, oh-my-openagent, oh-my-claudecode, oh-my-codex, and claw-code. Come chat about LLMs, harness engineering, agent workflows, and autonomous software development.
+加入 [**UltraWorkers Discord**](https://discord.gg/6ztZB9jvWq) — clawhip、oh-my-openagent、oh-my-claudecode、oh-my-codex 和 claw-code 的社区。来聊聊 LLMs、框架工程、代理工作流和自主软件开发。
 
 [![Discord](https://img.shields.io/badge/Join%20Discord-UltraWorkers-5865F2?logo=discord&style=for-the-badge)](https://discord.gg/6ztZB9jvWq)
 
-## Star History
+## 星标历史
 
-See the chart at the top of this README.
+请查看本 README 顶部的图表。
 
-## Ownership / Affiliation Disclaimer
+## 所有权/关联免责声明
 
-- This repository does **not** claim ownership of the original Claude Code source material.
-- This repository is **not affiliated with, endorsed by, or maintained by Anthropic**.
+- 本仓库 **不** 声称拥有原始 Claude Code 源材料的所有权。
+- 本仓库 **不** 与 Anthropic 相关联、不被其认可、也不由其维护。
